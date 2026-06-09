@@ -66,13 +66,14 @@ impl Win32Overlay {
                 },
                 900,
                 request.policy.font_size.saturating_add(28) as i32,
-                HWND(0),
-                HMENU(0),
+                HWND(std::ptr::null_mut()),
+                HMENU(std::ptr::null_mut()),
                 instance,
                 None,
-            );
+            )
+            .map_err(|error| OverlayError::Backend(error.to_string()))?;
 
-            if hwnd.0 == 0 {
+            if hwnd.0.is_null() {
                 return Err(OverlayError::Backend("CreateWindowExW failed".to_owned()));
             }
 
@@ -121,7 +122,7 @@ unsafe extern "system" fn window_proc(
 pub fn run_message_loop() {
     unsafe {
         let mut msg = MSG::default();
-        while GetMessageW(&mut msg, HWND(0), 0, 0).into() {
+        while GetMessageW(&mut msg, HWND(std::ptr::null_mut()), 0, 0).into() {
             TranslateMessage(&msg);
             DispatchMessageW(&msg);
         }

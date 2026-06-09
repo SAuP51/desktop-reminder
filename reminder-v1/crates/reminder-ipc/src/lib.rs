@@ -297,15 +297,13 @@ mod named_pipe {
     fn connect_pipe() -> Result<File, IpcError> {
         let name = pipe_name();
         let deadline = Instant::now() + Duration::from_millis(500);
-        let mut last_error = None;
 
         loop {
             match OpenOptions::new().read(true).write(true).open(&name) {
                 Ok(file) => return Ok(file),
                 Err(error) => {
-                    last_error = Some(error);
                     if Instant::now() >= deadline {
-                        return Err(last_error.expect("last error set before deadline").into());
+                        return Err(error.into());
                     }
                     thread::sleep(Duration::from_millis(50));
                 }
