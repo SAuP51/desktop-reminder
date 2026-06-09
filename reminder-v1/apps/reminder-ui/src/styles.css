@@ -1,0 +1,305 @@
+:root {
+  color: #1b1d22;
+  background: #f5f7fb;
+  font-family:
+    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 15px;
+  line-height: 1.45;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+button {
+  min-height: 36px;
+  border: 1px solid #c8d0dd;
+  border-radius: 6px;
+  padding: 0 14px;
+  color: #1d2430;
+  background: #ffffff;
+  cursor: pointer;
+}
+
+button:hover:not(:disabled) {
+  border-color: #7c8ba1;
+}
+
+button:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+input,
+textarea,
+select {
+  width: 100%;
+  border: 1px solid #c8d0dd;
+  border-radius: 6px;
+  padding: 9px 10px;
+  background: #ffffff;
+  color: #1b1d22;
+}
+
+textarea {
+  min-height: 86px;
+  resize: vertical;
+}
+
+label {
+  display: grid;
+  gap: 6px;
+  color: #4c5666;
+  font-size: 13px;
+}
+
+.shell {
+  width: min(1180px, calc(100vw - 32px));
+  margin: 0 auto;
+  padding: 24px 0;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.topbar h1,
+.section-title h2,
+.row h3 {
+  margin: 0;
+  letter-spacing: 0;
+}
+
+.topbar h1 {
+  font-size: 25px;
+  font-weight: 700;
+}
+
+.topbar p,
+.row p,
+.empty {
+  margin: 4px 0 0;
+  color: #687386;
+}
+
+.toolbar,
+.section-title,
+.row-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.toolbar {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.toolbar.compact {
+  justify-content: flex-start;
+}
+
+.notice {
+  margin-bottom: 16px;
+  border: 1px solid #d88989;
+  border-radius: 6px;
+  padding: 10px 12px;
+  color: #8c1f28;
+  background: #fff3f4;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(320px, 420px) 1fr;
+  gap: 16px;
+  align-items: start;
+}
+
+.panel {
+  border: 1px solid #d9dfe9;
+  border-radius: 8px;
+  padding: 16px;
+  background: #ffffff;
+}
+
+.editor {
+  display: grid;
+  gap: 14px;
+}
+
+.section-title {
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.section-title h2 {
+  font-size: 17px;
+}
+
+.section-title span {
+  color: #687386;
+}
+
+.segmented {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.segmented.three {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.segmented button.active {
+  border-color: #1f6feb;
+  color: #0d4cba;
+  background: #eef5ff;
+}
+
+.grid2 {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+.grid3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+fieldset {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  border: 1px solid #e2e7f0;
+  border-radius: 7px;
+  padding: 12px;
+}
+
+legend {
+  padding: 0 4px;
+  color: #4c5666;
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.preview {
+  margin: 0;
+  padding-left: 22px;
+  color: #4c5666;
+}
+
+.rows {
+  display: grid;
+  gap: 10px;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 12px;
+  align-items: center;
+  border: 1px solid #e2e7f0;
+  border-radius: 7px;
+  padding: 12px;
+}
+
+.row.selected {
+  border-color: #1f6feb;
+  background: #f5f9ff;
+}
+
+.row h3 {
+  font-size: 15px;
+  font-weight: 650;
+}
+
+.switch {
+  display: flex;
+  align-items: center;
+  grid-auto-flow: column;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.switch input {
+  width: auto;
+}
+
+.switch.boxed {
+  min-height: 40px;
+  align-content: center;
+  border: 1px solid #c8d0dd;
+  border-radius: 6px;
+  padding: 9px 10px;
+  color: #1b1d22;
+  background: #ffffff;
+}
+
+.history {
+  margin-top: 16px;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th,
+td {
+  border-top: 1px solid #e2e7f0;
+  padding: 9px 8px;
+  text-align: left;
+  vertical-align: top;
+}
+
+th {
+  color: #4c5666;
+  font-size: 13px;
+  font-weight: 650;
+}
+
+td {
+  color: #2a303a;
+  word-break: break-word;
+}
+
+@media (max-width: 840px) {
+  .topbar,
+  .layout {
+    display: grid;
+  }
+
+  .layout {
+    grid-template-columns: 1fr;
+  }
+
+  .toolbar {
+    justify-content: flex-start;
+  }
+
+  .grid2,
+  .grid3 {
+    grid-template-columns: 1fr;
+  }
+
+  .row {
+    grid-template-columns: 1fr;
+  }
+}

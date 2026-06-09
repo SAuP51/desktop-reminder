@@ -1,0 +1,82 @@
+name: Build Windows
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - master
+    paths:
+      - "reminder-v1/**"
+      - ".github/workflows/build-windows.yml"
+
+jobs:
+  build:
+    name: Build Windows binaries
+    runs-on: windows-latest
+
+    defaults:
+      run:
+        shell: pwsh
+        working-directory: reminder-v1
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: reminder-v1
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: reminder-v1/apps/reminder-ui/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: reminder-v1/apps/reminder-ui
+        run: npm ci
+
+      - name: Format check
+        run: cargo fmt --all -- --check
+
+      - name: Test workspace
+        run: cargo test --workspace
+
+      - name: Clippy
+        run: cargo clippy --workspace --all-targets -- -D warnings
+
+      - name: Build agent and CLI
+        run: |
+          cargo build --release -p reminder-agent
+          cargo build --release -p reminder-cli
+
+      - name: Build Tauri settings app
+        working-directory: reminder-v1/apps/reminder-ui
+        run: npm run tauri build
+
+      - name: Collect portable binaries
+        run: |
+          New-Item -ItemType Directory -Force -Path dist\portable | Out-Null
+          Copy-Item -LiteralPath target\release\reminder-agent.exe -Destination dist\portable\
+          Copy-Item -LiteralPath target\release\reminder.exe -Destination dist\portable\
+          Copy-Item -LiteralPath apps\reminder-ui\src-tauri\target\release\reminder-ui.exe -Destination dist\portable\
+          Compress-Archive -Path dist\portable\* -DestinationPath dist\reminder-windows-portable.zip -Force
+
+      - name: Upload portable zip
+        uses: actions/upload-artifact@v4
+        with:
+          name: reminder-windows-portable
+          path: reminder-v1/dist/reminder-windows-portable.zip
+
+      - name: Upload Tauri bundles
+        uses: actions/upload-artifact@v4
+        with:
+          name: reminder-ui-tauri-bundles
+          path: reminder-v1/apps/reminder-ui/src-tauri/target/release/bundle/**

@@ -1,0 +1,16 @@
+id: add-hybrid-tauri-settings
+schema: spec-driven
+status: archived
+created_at: 2026-06-08
+archived_at: 2026-06-09
+title: Add hybrid Tauri settings architecture
+artifacts:
+  proposal: done
+  design: done
+  tasks: done
+  specs:
+    hybrid-desktop-reminder: synced
+notes:
+  - OpenSpec CLI was unavailable in this workspace, so artifacts were reconstructed manually from the accepted plan and implemented code state.
+  - Main spec synced to openspec/specs/hybrid-desktop-reminder/spec.md.
+  - Full Rust test/clippy execution is blocked on this machine until MSVC Build Tools and Windows SDK import libraries are installed.
