@@ -116,7 +116,7 @@ impl ReminderStore {
                 reminder.id.to_string(),
                 &reminder.title,
                 &reminder.message,
-                bool_to_int(reminder.enabled),
+                i64::from(u8::from(reminder.enabled)),
                 priority,
                 reminder.utc_offset_seconds,
                 schedule_json,
@@ -192,7 +192,7 @@ impl ReminderStore {
         let changed = self.conn.execute(
             "UPDATE reminders SET enabled = ?1, updated_at_utc = ?2 WHERE id = ?3",
             params![
-                bool_to_int(enabled),
+                i64::from(u8::from(enabled)),
                 Utc::now().to_rfc3339(),
                 id.to_string()
             ],
@@ -306,14 +306,6 @@ impl RawHistoryRow {
                 .transpose()?,
             result: self.result,
         })
-    }
-}
-
-fn bool_to_int(value: bool) -> i64 {
-    if value {
-        1
-    } else {
-        0
     }
 }
 

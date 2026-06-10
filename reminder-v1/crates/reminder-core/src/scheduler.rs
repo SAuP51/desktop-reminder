@@ -67,7 +67,11 @@ impl ScheduleEngine {
                 if let Some(candidate) =
                     Self::next_in_window(window, anchor_day, after, &rule.exclusions.dates)
                 {
-                    if candidate > after && best.map_or(true, |current| candidate < current) {
+                    let is_better = match best {
+                        Some(current) => candidate < current,
+                        None => true,
+                    };
+                    if candidate > after && is_better {
                         best = Some(candidate);
                     }
                 }
@@ -226,13 +230,16 @@ impl ScheduleEngine {
             return false;
         }
 
-        range.end.map_or(true, |end| date <= end)
+        match range.end {
+            Some(end) => date <= end,
+            None => true,
+        }
     }
 
     fn range_ended(range: Option<&DateRange>, date: NaiveDate) -> bool {
         range
             .and_then(|range| range.end)
-            .map_or(false, |end| date > end)
+            .is_some_and(|end| date > end)
     }
 
     fn day_filter_allows(filter: &DayFilter, date: NaiveDate) -> bool {
@@ -315,7 +322,7 @@ impl SchedulerQueue {
         while self
             .heap
             .peek()
-            .map_or(false, |item| item.next_fire_at <= now)
+            .is_some_and(|item| item.next_fire_at <= now)
         {
             let item = self.heap.pop().expect("heap item existed after peek");
             due.push(DueReminder {

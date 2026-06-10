@@ -122,15 +122,16 @@ fn handle_ipc_request(
             let queue = SchedulerQueue::rebuild(&reminders, Local::now().naive_local())
                 .map_err(|error| error.to_string())?;
 
+            let paused_until_utc = *control
+                .paused_until_utc
+                .lock()
+                .map_err(|_| "pause state lock poisoned".to_owned())?;
+
             Ok(IpcResponse::Status(AgentStatus {
                 running: true,
                 enabled_reminders: reminders.len(),
                 next_fire_at: queue.peek_next().map(|item| item.next_fire_at),
-                paused_until_utc: control
-                    .paused_until_utc
-                    .lock()
-                    .map_err(|_| "pause state lock poisoned".to_owned())?
-                    .clone(),
+                paused_until_utc,
             }))
         }
         IpcRequest::ListReminders => {
@@ -501,11 +502,10 @@ fn show_next_reminder(
 }
 
 fn next_wait_timeout(queue: &SchedulerQueue, control: &AgentControl) -> Result<StdDuration> {
-    let paused_until = control
+    let paused_until = *control
         .paused_until_utc
         .lock()
-        .map_err(|_| anyhow::anyhow!("pause state lock poisoned"))?
-        .clone();
+        .map_err(|_| anyhow::anyhow!("pause state lock poisoned"))?;
 
     if let Some(paused_until) = paused_until {
         let wait = paused_until.signed_duration_since(Utc::now());
@@ -536,7 +536,7 @@ fn pause_has_elapsed(control: &AgentControl) -> Result<bool> {
 
     if paused_until
         .as_ref()
-        .map_or(false, |value| *value <= Utc::now())
+        .is_some_and(|value| *value <= Utc::now())
     {
         *paused_until = None;
         Ok(true)
@@ -552,7 +552,7 @@ fn is_paused(control: &AgentControl) -> Result<bool> {
         .map_err(|_| anyhow::anyhow!("pause state lock poisoned"))?;
     Ok(paused_until
         .as_ref()
-        .map_or(false, |value| *value > Utc::now()))
+        .is_some_and(|value| *value > Utc::now()))
 }
 
 fn open_store(path: &Path) -> Result<ReminderStore, String> {

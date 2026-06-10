@@ -145,15 +145,9 @@ pub enum TimeWindow {
     },
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Exclusions {
     pub dates: Vec<NaiveDate>,
-}
-
-impl Default for Exclusions {
-    fn default() -> Self {
-        Self { dates: Vec::new() }
-    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
