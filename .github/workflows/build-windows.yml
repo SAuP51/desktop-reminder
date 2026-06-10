@@ -1,5 +1,15 @@
 name: Build Windows
 
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_NET_RETRY: "10"
+  CARGO_HTTP_TIMEOUT: "120"
+  CARGO_HTTP_MULTIPLEXING: "false"
+  CARGO_REGISTRIES_CRATES_IO_PROTOCOL: sparse
+  NPM_CONFIG_FETCH_RETRIES: "5"
+  NPM_CONFIG_FETCH_RETRY_MINTIMEOUT: "20000"
+  NPM_CONFIG_FETCH_RETRY_MAXTIMEOUT: "120000"
+
 on:
   workflow_dispatch:
     inputs:
@@ -11,6 +21,14 @@ on:
         options:
           - "true"
           - "false"
+      build_installers:
+        description: "Also build Tauri MSI/NSIS installers"
+        required: true
+        default: "false"
+        type: choice
+        options:
+          - "false"
+          - "true"
   push:
     branches:
       - main
@@ -35,6 +53,8 @@ jobs:
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
 
       - name: Cache Rust
         uses: Swatinem/rust-cache@v2
@@ -52,33 +72,92 @@ jobs:
         working-directory: reminder-v1/apps/reminder-ui
         run: npm ci
 
+      - name: Fetch Rust dependencies
+        run: |
+          $ErrorActionPreference = "Stop"
+
+          function Invoke-WithRetry {
+            param(
+              [scriptblock]$Command,
+              [int]$Attempts = 5,
+              [int]$DelaySeconds = 20
+            )
+
+            for ($attempt = 1; $attempt -le $Attempts; $attempt++) {
+              try {
+                $global:LASTEXITCODE = 0
+                & $Command
+                if ($LASTEXITCODE -eq 0) {
+                  return
+                }
+
+                throw "Command exited with code $LASTEXITCODE."
+              } catch {
+                if ($attempt -eq $Attempts) {
+                  throw
+                }
+
+                Write-Warning "Attempt $attempt failed: $($_.Exception.Message). Retrying in $DelaySeconds seconds..."
+                Start-Sleep -Seconds $DelaySeconds
+              }
+            }
+          }
+
+          Invoke-WithRetry { cargo fetch --locked }
+
       - name: Format check
         if: ${{ github.event_name != 'workflow_dispatch' || inputs.run_checks == 'true' }}
         run: cargo fmt --all -- --check
 
       - name: Test workspace
         if: ${{ github.event_name != 'workflow_dispatch' || inputs.run_checks == 'true' }}
-        run: cargo test --workspace
+        run: cargo test --locked --workspace
 
       - name: Clippy
         if: ${{ github.event_name != 'workflow_dispatch' || inputs.run_checks == 'true' }}
-        run: cargo clippy --workspace --all-targets -- -D warnings
+        run: cargo clippy --locked --workspace --all-targets -- -D warnings
 
       - name: Build agent and CLI
         run: |
-          cargo build --release -p reminder-agent
-          cargo build --release -p reminder-cli
+          cargo build --locked --release -p reminder-agent
+          cargo build --locked --release -p reminder-cli
 
       - name: Build Tauri settings app
         working-directory: reminder-v1/apps/reminder-ui
-        run: npm run tauri build
+        run: npm run tauri -- build --ci --no-bundle -- --locked
 
       - name: Collect portable binaries
         run: |
+          $ErrorActionPreference = "Stop"
+
+          function Copy-FirstExisting {
+            param(
+              [string]$Label,
+              [string[]]$Candidates,
+              [string]$Destination
+            )
+
+            foreach ($candidate in $Candidates) {
+              if (Test-Path -LiteralPath $candidate -PathType Leaf) {
+                Copy-Item -LiteralPath $candidate -Destination $Destination
+                Write-Host "Copied $Label from $candidate"
+                return
+              }
+            }
+
+            Write-Host "Current release outputs:"
+            Get-ChildItem -Path target -Recurse -Filter "*.exe" -ErrorAction SilentlyContinue |
+              Select-Object -ExpandProperty FullName
+            throw "$Label was not found in any expected output path: $($Candidates -join ', ')"
+          }
+
           New-Item -ItemType Directory -Force -Path dist\portable | Out-Null
-          Copy-Item -LiteralPath target\release\reminder-agent.exe -Destination dist\portable\
-          Copy-Item -LiteralPath target\release\reminder.exe -Destination dist\portable\
-          Copy-Item -LiteralPath apps\reminder-ui\src-tauri\target\release\reminder-ui.exe -Destination dist\portable\
+          Copy-FirstExisting "reminder-agent.exe" @("target\release\reminder-agent.exe") "dist\portable\"
+          Copy-FirstExisting "reminder.exe" @("target\release\reminder.exe") "dist\portable\"
+          Copy-FirstExisting "reminder-ui.exe" @(
+            "target\release\reminder-ui.exe",
+            "apps\reminder-ui\src-tauri\target\release\reminder-ui.exe"
+          ) "dist\portable\"
           Compress-Archive -Path dist\portable\* -DestinationPath dist\reminder-windows-portable.zip -Force
 
       - name: Upload portable zip
@@ -87,8 +166,37 @@ jobs:
           name: reminder-windows-portable
           path: reminder-v1/dist/reminder-windows-portable.zip
 
+      - name: Build Tauri installers
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.build_installers == 'true' }}
+        working-directory: reminder-v1/apps/reminder-ui
+        run: npm run tauri -- build --ci --no-sign -- --locked
+
+      - name: Collect Tauri bundles
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.build_installers == 'true' }}
+        run: |
+          $ErrorActionPreference = "Stop"
+          New-Item -ItemType Directory -Force -Path dist\tauri-bundles | Out-Null
+
+          $bundleCandidates = @(
+            "target\release\bundle",
+            "apps\reminder-ui\src-tauri\target\release\bundle"
+          )
+
+          $bundleSource = $bundleCandidates |
+            Where-Object { Test-Path -LiteralPath $_ -PathType Container } |
+            Select-Object -First 1
+
+          if ($bundleSource) {
+            Copy-Item -Path "$bundleSource\*" -Destination dist\tauri-bundles -Recurse -Force
+            Write-Host "Collected Tauri bundles from $bundleSource"
+          } else {
+            Write-Warning "No Tauri bundle directory found. Portable binaries were still collected."
+          }
+
       - name: Upload Tauri bundles
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.build_installers == 'true' }}
         uses: actions/upload-artifact@v4
         with:
           name: reminder-ui-tauri-bundles
-          path: reminder-v1/apps/reminder-ui/src-tauri/target/release/bundle/**
+          path: reminder-v1/dist/tauri-bundles/**
+          if-no-files-found: warn
