@@ -77,7 +77,7 @@ impl Win32Overlay {
                 return Err(OverlayError::Backend("CreateWindowExW failed".to_owned()));
             }
 
-            ShowWindow(hwnd, SW_HIDE);
+            let _ = ShowWindow(hwnd, SW_HIDE);
             self.hwnd = Some(hwnd);
             Ok(hwnd)
         }
@@ -93,7 +93,7 @@ impl OverlayBackend for Win32Overlay {
             "Win32 overlay request accepted; scrolling renderer to be implemented next"
         );
         unsafe {
-            ShowWindow(hwnd, SW_SHOWNOACTIVATE);
+            let _ = ShowWindow(hwnd, SW_SHOWNOACTIVATE);
         }
         Ok(())
     }
@@ -123,7 +123,7 @@ pub fn run_message_loop() {
     unsafe {
         let mut msg = MSG::default();
         while GetMessageW(&mut msg, HWND(std::ptr::null_mut()), 0, 0).into() {
-            TranslateMessage(&msg);
+            let _ = TranslateMessage(&msg);
             DispatchMessageW(&msg);
         }
     }
